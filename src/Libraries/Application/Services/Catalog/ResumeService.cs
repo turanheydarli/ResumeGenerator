@@ -9,8 +9,8 @@ public class ResumeService : IResumeService
 {
     private readonly ITemplateService _templateService;
     private readonly HtmlToPdf _htmlToPdf;
-    private readonly IHostingEnvironment  _environment;
-    
+    private readonly IHostingEnvironment _environment;
+
     public ResumeService(ITemplateService templateService, HtmlToPdf htmlToPdf, IHostingEnvironment environment)
     {
         _templateService = templateService;
@@ -29,34 +29,31 @@ public class ResumeService : IResumeService
 
         PdfDocument document = _htmlToPdf.ConvertHtmlString(templateHtml);
 
-        string fileName = Guid.NewGuid().ToString() + ".pdf";
-        
+        string fileName = Guid.NewGuid() + ".pdf";
+
         string path = Path.Combine(_environment.ContentRootPath, "wwwroot", "generated");
 
         await using FileStream stream = new FileStream(Path.Combine(path, fileName), FileMode.Create);
-        
+
         await using (MemoryStream memoryStream = new MemoryStream(document.Save()))
         {
             await memoryStream.CopyToAsync(stream);
         }
 
-        return new ResumeResult(true,"", fileName);
+        return new ResumeResult(true, "", fileName);
     }
 
     private string GenerateTemplateHtml(ResumeModel resumeModel, TemplateModel template)
     {
-        string languagesSting = "";
-        string skillsSting = "";
+        string languagesSting = resumeModel.Languages?.Count > 0
+            ? resumeModel.Languages.Aggregate("", (current, language) => 
+                current + template.LanguagesSection.Replace("{language}", language.Name))
+            : "";
 
-        foreach (var language in resumeModel.Languages)
-        {
-            languagesSting += template.LanguagesSection.Replace("{language}", language.Name);
-        }
-
-        foreach (var skill in resumeModel.Skills)
-        {
-            skillsSting += template.LanguagesSection.Replace("{skill}", skill.Name);
-        }
+        string skillsSting = resumeModel.Skills?.Count > 0
+            ? resumeModel.Skills.Aggregate("", (current, skill) => 
+                current + template.LanguagesSection.Replace("{skill}", skill.Name))
+            : "";
 
         string content = template.Content;
 
@@ -69,6 +66,7 @@ public class ResumeService : IResumeService
         content = content.Replace("{specialty}", resumeModel.Specialty);
         content = content.Replace("{educationLevel}", resumeModel.EducationLevel);
         content = content.Replace("{fullName}", resumeModel.Name);
+        content = content.Replace("{university}", resumeModel.University);
 
         return content;
     }
